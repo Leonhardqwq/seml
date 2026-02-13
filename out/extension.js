@@ -8,6 +8,30 @@ const error_1 = require("./error");
 const parser_1 = require("./parser");
 const child_process_1 = require("child_process");
 const templates_1 = require("./templates");
+function executeTestFromText(text, testName, baseName, dirName, lineOffset) {
+    const parsedOutput = (0, parser_1.parse)(text);
+    if ((0, error_1.isError)(parsedOutput)) {
+        const lineNum = parsedOutput.lineNum + lineOffset;
+        vscode.window.showErrorMessage(`[第${lineNum}行] ${parsedOutput.msg}: ${parsedOutput.src}`);
+        return;
+    }
+    const { out, args } = parsedOutput;
+    const jsonOutput = JSON.stringify(out, null, 4);
+    const jsonFilePath = path.join(dirName, `${baseName}.json`);
+    const destDirName = path.join(dirName, "dest");
+    if (!fs.existsSync(destDirName)) {
+        fs.mkdirSync(destDirName);
+    }
+    fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+        if (err) {
+            vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+            return;
+        }
+        runBinary(`${testName.toLowerCase()}_test.exe`, [...Object.values(args).flatMap(x => x),
+            "-f", jsonFilePath,
+            "-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)], jsonFilePath);
+    });
+}
 function runBinary(filename, args, jsonFilePath) {
     const binaryPath = path.join(__dirname, "bin", filename);
     (0, child_process_1.execFile)(binaryPath, args, (err, stdout, stderr) => {
@@ -95,24 +119,15 @@ function activate(context) {
                 vscode.window.showErrorMessage(`请先打开文件`);
                 return;
             }
-            const compiledJson = compileToJson(editor.document);
-            if (compiledJson === undefined) {
+            const doc = editor.document;
+            const semlFilePath = doc.uri.fsPath;
+            if (path.extname(semlFilePath) !== ".seml") {
+                vscode.window.showErrorMessage("请打开 .seml 文件");
                 return;
             }
-            const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-            const destDirName = path.join(dirName, "dest");
-            if (!fs.existsSync(destDirName)) {
-                fs.mkdirSync(destDirName);
-            }
-            fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-                if (err) {
-                    vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
-                    return;
-                }
-                runBinary(`${testName.toLowerCase()}_test.exe`, [...Object.values(args).flatMap(x => x),
-                    "-f", jsonFilePath,
-                    "-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)], jsonFilePath);
-            });
+            const dirName = path.dirname(semlFilePath);
+            const baseName = path.basename(semlFilePath, ".seml");
+            executeTestFromText(doc.getText(), testName, baseName, dirName, 0);
         }));
         context.subscriptions.push(vscode.commands.registerCommand(`seml.use${testName}Template`, () => {
             const editor = vscode.window.activeTextEditor;
