@@ -8,6 +8,7 @@ const error_1 = require("./error");
 const parser_1 = require("./parser");
 const child_process_1 = require("child_process");
 const templates_1 = require("./templates");
+const block_extractor_1 = require("./block_extractor");
 function executeTestFromText(text, testName, baseName, dirName, lineOffset) {
     const parsedOutput = (0, parser_1.parse)(text);
     if ((0, error_1.isError)(parsedOutput)) {
@@ -154,6 +155,55 @@ function activate(context) {
             }
         }));
     }
+    context.subscriptions.push(vscode.commands.registerCommand('seml.testBlocks', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor === undefined) {
+            vscode.window.showErrorMessage(`请先打开文件`);
+            return;
+        }
+        const doc = editor.document;
+        const text = doc.getText();
+        const filePath = doc.uri.fsPath;
+        const dirName = path.dirname(filePath);
+        const sourceBaseName = path.basename(filePath, path.extname(filePath));
+        const blocks = (0, block_extractor_1.extractSemlBlocks)(text);
+        const errors = [];
+        const testableBlocks = [];
+        for (const block of blocks) {
+            if ((0, error_1.isError)(block)) {
+                errors.push(block);
+            }
+            else {
+                testableBlocks.push(block);
+            }
+        }
+        if (testableBlocks.length === 0 && errors.length === 0) {
+            vscode.window.showErrorMessage("未找到可测试的 seml 代码块");
+            return;
+        }
+        for (const err of errors) {
+            vscode.window.showErrorMessage(`[第${err.lineNum}行] ${err.msg}: ${err.src}`);
+        }
+        const usedNames = new Set();
+        const resolvedNames = [];
+        for (let i = 0; i < testableBlocks.length; i++) {
+            const block = testableBlocks[i];
+            let baseName = block.name ?? `${sourceBaseName}_${i + 1}`;
+            let suffix = 1;
+            let finalName = baseName;
+            while (usedNames.has(finalName)) {
+                suffix++;
+                finalName = `${baseName}_${suffix}`;
+            }
+            usedNames.add(finalName);
+            resolvedNames.push(finalName);
+        }
+        for (let i = 0; i < testableBlocks.length; i++) {
+            const block = testableBlocks[i];
+            const baseName = resolvedNames[i];
+            executeTestFromText(block.content, block.type, baseName, dirName, block.startLine - 1);
+        }
+    }));
 }
 exports.activate = activate;
 function deactivate() { }

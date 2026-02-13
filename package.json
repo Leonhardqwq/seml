@@ -71,6 +71,10 @@
       {
         "command": "seml.usePogoTemplate",
         "title": "Seml: 使用跳跳模板 (use pogo template)"
+      },
+      {
+        "command": "seml.testBlocks",
+        "title": "Seml: 测试代码块 (test blocks)"
       }
     ]
   },

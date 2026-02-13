@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { isError } from './error';
+import { isError, Error as SemlError } from './error';
 import { parse } from './parser';
 import { exec, execFile, ExecFileException } from 'child_process';
 import { templates } from './templates';
+import { extractSemlBlocks, SemlBlock } from './block_extractor';
 
 
 function executeTestFromText(text: string, testName: string, baseName: string, dirName: string, lineOffset: number) {
@@ -182,6 +183,71 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}));
 	}
+
+	context.subscriptions.push(vscode.commands.registerCommand('seml.testBlocks', () => {
+		const editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			vscode.window.showErrorMessage(`请先打开文件`);
+			return;
+		}
+
+		const doc = editor.document;
+		const text = doc.getText();
+		const filePath = doc.uri.fsPath;
+		const dirName = path.dirname(filePath);
+		const sourceBaseName = path.basename(filePath, path.extname(filePath));
+
+		const blocks = extractSemlBlocks(text);
+
+		const errors: SemlError[] = [];
+		const testableBlocks: SemlBlock[] = [];
+		for (const block of blocks) {
+			if (isError(block)) {
+				errors.push(block);
+			} else {
+				testableBlocks.push(block);
+			}
+		}
+
+		if (testableBlocks.length === 0 && errors.length === 0) {
+			vscode.window.showErrorMessage("未找到可测试的 seml 代码块");
+			return;
+		}
+
+		for (const err of errors) {
+			vscode.window.showErrorMessage(`[第${err.lineNum}行] ${err.msg}: ${err.src}`);
+		}
+
+		const usedNames = new Set<string>();
+		const resolvedNames: string[] = [];
+
+		for (let i = 0; i < testableBlocks.length; i++) {
+			const block = testableBlocks[i]!;
+			let baseName = block.name ?? `${sourceBaseName}_${i + 1}`;
+
+			let suffix = 1;
+			let finalName = baseName;
+			while (usedNames.has(finalName)) {
+				suffix++;
+				finalName = `${baseName}_${suffix}`;
+			}
+
+			usedNames.add(finalName);
+			resolvedNames.push(finalName);
+		}
+
+		for (let i = 0; i < testableBlocks.length; i++) {
+			const block = testableBlocks[i]!;
+			const baseName = resolvedNames[i]!;
+			executeTestFromText(
+				block.content,
+				block.type,
+				baseName,
+				dirName,
+				block.startLine - 1
+			);
+		}
+	}));
 }
 
 export function deactivate() { }
