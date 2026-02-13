@@ -99,7 +99,7 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 		} else {
 			const waveNum = parseNatural(chopPrefix(waveNumToken, "w"));
 
-			if (waveNum === null || waveNum < 1 || waveNum > 9) {
+			if (waveNum === null || waveNum < 1 || waveNum > 99) {
 				return error(lineNum, "波数应为正整数", waveNumToken);
 			}
 
@@ -820,6 +820,8 @@ export function parseBoolArg(args: { [key: string]: string[] }, argName: string,
 export function parse(text: string) {
 	const out: ParserOutput = { setting: {}, waves: [] };
 	const args: { [key: string]: string[] } = {};
+	let avzTime = false;
+
 
 	const lines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
 	if (isError(lines)) {
@@ -853,6 +855,11 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
 			} else if (symbol.startsWith("natural:")) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
+			} else if (symbol.startsWith("avzTime:")) {
+				parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
+				if (!isError(parseResult)) {
+					avzTime = "avzTime" in args;
+				}
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
@@ -867,8 +874,10 @@ export function parse(text: string) {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.jalapeno);
-			} else if (symbol === "a") {
+		} else if (symbol === "a" || symbol === "W") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.squash);
+			} else if (symbol === "N") {
+				parseResult = parseFixedCard(out, lineNum, line, PlantType.doomshroom);
 			} else if (symbol === "A_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J_NUM") {
@@ -888,6 +897,21 @@ export function parse(text: string) {
 	}
 
 	delete out.setting.variables;
+	delete args["avzTime"];
+	if (avzTime) {
+		for (const wave of out.waves) {
+			for (const action of wave.actions) {
+				if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
+					(action as { time: number }).time -= 1;
+				} else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
+					(action as { time: number }).time += 1;
+					if (action.shovelTime !== undefined) {
+						(action as { shovelTime: number }).shovelTime += 1;
+					}
+				}
+			}
+		}
+	}
 	for (const wave of out.waves) {
 		wave.actions.sort((a, b) => a.time - b.time);
 	}
