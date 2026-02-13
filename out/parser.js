@@ -23,7 +23,7 @@ function parseWave(out, lineNum, line) {
         }
         else {
             const waveNum = (0, string_1.parseNatural)((0, string_1.chopPrefix)(waveNumToken, "w"));
-            if (waveNum === null || waveNum < 1 || waveNum > 9) {
+            if (waveNum === null || waveNum < 1 || waveNum > 99) {
                 return (0, error_1.error)(lineNum, "波数应为正整数", waveNumToken);
             }
             return waveNum;
@@ -646,6 +646,7 @@ exports.parseBoolArg = parseBoolArg;
 function parse(text) {
     const out = { setting: {}, waves: [] };
     const args = {};
+    let avzTime = false;
     const lines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
     if ((0, error_1.isError)(lines)) {
         return lines;
@@ -683,6 +684,12 @@ function parse(text) {
             else if (symbol.startsWith("natural:")) {
                 parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
             }
+            else if (symbol.startsWith("avzTime:")) {
+                parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
+                if (!(0, error_1.isError)(parseResult)) {
+                    avzTime = "avzTime" in args;
+                }
+            }
             else if (symbol.startsWith("w")) {
                 parseResult = parseWave(out, lineNum, line);
             }
@@ -704,8 +711,11 @@ function parse(text) {
             else if (symbol === "J") {
                 parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
-            else if (symbol === "a") {
+            else if (symbol === "a" || symbol === "W") {
                 parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.squash);
+            }
+            else if (symbol === "N") {
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.doomshroom);
             }
             else if (symbol === "A_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.cherryBomb);
@@ -728,6 +738,22 @@ function parse(text) {
         }
     }
     delete out.setting.variables;
+    delete args["avzTime"];
+    if (avzTime) {
+        for (const wave of out.waves) {
+            for (const action of wave.actions) {
+                if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
+                    action.time -= 1;
+                }
+                else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
+                    action.time += 1;
+                    if (action.shovelTime !== undefined) {
+                        action.shovelTime += 1;
+                    }
+                }
+            }
+        }
+    }
     for (const wave of out.waves) {
         wave.actions.sort((a, b) => a.time - b.time);
     }
