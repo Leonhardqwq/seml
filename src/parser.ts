@@ -874,7 +874,7 @@ export function parse(text: string) {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.jalapeno);
-		} else if (symbol === "a" || symbol === "W") {
+			} else if (symbol === "a" || symbol === "W") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.squash);
 			} else if (symbol === "N") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.doomshroom);
@@ -882,7 +882,7 @@ export function parse(text: string) {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.jalapeno);
-			} else if (symbol === "a_NUM") {
+			} else if (symbol === "a_NUM" || symbol === "W_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.squash);
 			} else if (symbol === "SET") {
 				parseResult = parseSet(out, lineNum, line);
@@ -902,6 +902,8 @@ export function parse(text: string) {
 		for (const wave of out.waves) {
 			for (const action of wave.actions) {
 				if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
+					(action as { time: number }).time -= 1;
+				} else if (action.op === "SmartCard" && ["A_NUM", "J_NUM", "a_NUM", "W_NUM"].includes(action.symbol)) {
 					(action as { time: number }).time -= 1;
 				} else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
 					(action as { time: number }).time += 1;
@@ -929,7 +931,7 @@ export function expandLines(lines: string[]): Line[] | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
 	({
 		lineNum: lineNum + 1, line: line
-			.split("#")[0]!.trim() 		// ignore comments 
+			.split("#")[0]!.trim() 		// ignore comments
 			.replace(/[ \t]+/g, ' ')   	// replace multiple spaces/tabs with one space
 	}));
 	const expandedLines: Line[] = [];

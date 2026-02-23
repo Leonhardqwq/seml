@@ -723,7 +723,7 @@ function parse(text) {
             else if (symbol === "J_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
-            else if (symbol === "a_NUM") {
+            else if (symbol === "a_NUM" || symbol === "W_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.squash);
             }
             else if (symbol === "SET") {
@@ -745,6 +745,9 @@ function parse(text) {
                 if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
                     action.time -= 1;
                 }
+                else if (action.op === "SmartCard" && ["A_NUM", "J_NUM", "a_NUM", "W_NUM"].includes(action.symbol)) {
+                    action.time -= 1;
+                }
                 else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
                     action.time += 1;
                     if (action.shovelTime !== undefined) {
@@ -763,7 +766,7 @@ exports.parse = parse;
 function expandLines(lines) {
     const originalLines = lines.map((line, lineNum) => ({
         lineNum: lineNum + 1, line: line
-            .split("#")[0].trim() // ignore comments 
+            .split("#")[0].trim() // ignore comments
             .replace(/[ \t]+/g, ' ') // replace multiple spaces/tabs with one space
     }));
     const expandedLines = [];
