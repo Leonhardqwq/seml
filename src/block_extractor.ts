@@ -1,7 +1,7 @@
 import { Error, error, isError } from "./error";
 
 export type SemlBlock = {
-	readonly type: "smash" | "explode" | "refresh" | "pogo";
+	readonly type: "smash" | "explode" | "refresh" | "pogo" | "pos";
 	readonly name: string | undefined;
 	readonly content: string;
 	readonly startLine: number;
@@ -9,7 +9,7 @@ export type SemlBlock = {
 };
 
 type ParsedHeader = {
-	readonly type: "smash" | "explode" | "refresh" | "pogo";
+	readonly type: "smash" | "explode" | "refresh" | "pogo" | "pos";
 	readonly name: string | undefined;
 };
 
@@ -36,7 +36,7 @@ export function parseBlockHeader(header: string, lineNum: number): ParsedHeader 
 		return error(lineNum, "缺少 type 属性", header);
 	}
 
-	if (type !== "smash" && type !== "explode" && type !== "refresh" && type !== "pogo") {
+	if (type !== "smash" && type !== "explode" && type !== "refresh" && type !== "pogo" && type !== "pos") {
 		return error(lineNum, "无效的测试类型", type);
 	}
 

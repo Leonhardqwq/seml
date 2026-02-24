@@ -113,7 +113,7 @@ function activate(context) {
             });
         });
     }));
-    for (const testName of ["Smash", "Explode", "Refresh", "Pogo"]) {
+    for (const testName of ["Smash", "Explode", "Refresh", "Pogo", "Pos"]) {
         context.subscriptions.push(vscode.commands.registerCommand(`seml.test${testName}`, () => {
             const editor = vscode.window.activeTextEditor;
             if (editor === undefined) {

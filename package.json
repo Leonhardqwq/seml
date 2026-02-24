@@ -73,6 +73,14 @@
         "title": "Seml: 使用跳跳模板 (use pogo template)"
       },
       {
+        "command": "seml.testPos",
+        "title": "Seml: 测试坐标分布 (test pos)"
+      },
+      {
+        "command": "seml.usePosTemplate",
+        "title": "Seml: 使用坐标分布模板 (use pos template)"
+      },
+      {
         "command": "seml.testBlocks",
         "title": "Seml: 测试代码块 (test blocks)"
       }

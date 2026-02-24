@@ -247,7 +247,7 @@ describe('parseWave', () => {
 
     it('should return an error for invalid wave length', () => {
         expect(parseWave(out, 1, 'w1 100 200 300 0',))
-            .to.deep.equal(error(1, '波长应为 ≥ 601 的整数', '0'));
+            .to.deep.equal(error(1, '波长应为正整数', '0'));
     });
 
     it('should return an error for invalid ice time', () => {
@@ -1024,7 +1024,7 @@ describe("parseZombieTypeArg", () => {
             error(1, "未知僵尸类型", "xxxx")
         );
         expect(parseZombieTypeArg(args, "require", "-req", "PE", 1, "require:僵", undefined)).to.deep.equal(
-            error(1, "未知僵尸类型", "僵 (支持的僵尸类型: 杆,桶,门,橄,舞,潜,车,豚,丑,气,矿,跳,偷,梯,篮,白,红)")
+            error(1, "未知僵尸类型", "僵 (支持的僵尸类型: 普,旗,障,杆,桶,报,门,橄,舞,伴,鸭,潜,车,豚,丑,气,矿,跳,雪,偷,梯,篮,白,鬼,红)")
         );
     });
 
@@ -1054,12 +1054,46 @@ describe("parseZombieTypeArg", () => {
         expect(args).to.deep.equal({ require: ["-req", ZombieType.buckethead.toString()] });
     });
 
-    it("should add multiple zombieTypes to args if they're valid", () => {
-        expect(parseZombieTypeArg(args, "require", "-req", "PE", 1, "require:buck scre", undefined)).to.equal(null);
-        expect(args).to.have.property("require").deep.equal(["-req", [ZombieType.buckethead, ZombieType.screendoor].join(",")]);
-        expect(parseZombieTypeArg(args, "ban", "-ban", "PE", 1, "ban:红白", undefined)).to.equal(null);
-        expect(args).to.have.property("ban").that.deep.equal(["-ban", [ZombieType.gigaGargantuar, ZombieType.gargantuar].join(",")]);
-    });
+	it("should add multiple zombieTypes to args if they're valid", () => {
+		expect(parseZombieTypeArg(args, "require", "-req", "PE", 1, "require:buck scre", undefined)).to.equal(null);
+		expect(args).to.have.property("require").deep.equal(["-req", [ZombieType.buckethead, ZombieType.screendoor].join(",")]);
+		expect(parseZombieTypeArg(args, "ban", "-ban", "PE", 1, "ban:红白", undefined)).to.equal(null);
+		expect(args).to.have.property("ban").that.deep.equal(["-ban", [ZombieType.gigaGargantuar, ZombieType.gargantuar].join(",")]);
+	});
+
+	it("should parse types arg with -z flag", () => {
+		expect(parseZombieTypeArg(args, "types", "-z", "PE", 1, "types:garg giga", undefined)).to.equal(null);
+		expect(args).to.deep.equal({ types: ["-z", [ZombieType.gargantuar, ZombieType.gigaGargantuar].join(",")] });
+	});
+
+	it("should parse types arg with Chinese abbreviations", () => {
+		expect(parseZombieTypeArg(args, "types", "-z", "PE", 1, "types:红白", undefined)).to.equal(null);
+		expect(args).to.deep.equal({ types: ["-z", [ZombieType.gigaGargantuar, ZombieType.gargantuar].join(",")] });
+	});
+});
+
+describe("parseIntArg (targetPos)", () => {
+	let args: { [key: string]: string[] };
+
+	beforeEach(() => {
+		args = {};
+	});
+
+	it("should parse targetPos", () => {
+		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
+		expect(args).to.deep.equal({ targetPos: ["-x", "400"] });
+	});
+
+	it("should return an error if targetPos is not a positive integer", () => {
+		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:0"))
+			.to.deep.equal(error(1, "targetPos 的值应为正整数", "0"));
+	});
+
+	it("should return an error if targetPos is specified multiple times", () => {
+		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
+		expect(parseIntArg(args, "targetPos", "-x", 2, "targetPos:500"))
+			.to.deep.equal(error(2, "参数重复", "targetPos"));
+	});
 });
 
 describe("parseBoolArg", () => {
@@ -1452,15 +1486,6 @@ describe("parse", () => {
             lineNum: 2,
             msg: "未知符号",
             src: "X (使用帮助: https://marketplace.visualstudio.com/items?itemName=Crescendo.seml)",
-        });
-    });
-
-    it("should deprecate assume_activate", () => {
-        expect(parse("assume_activate:true\n")).to.deep.equal({
-            type: "Error",
-            lineNum: 1,
-            msg: "自 Seml 1.5.5 起, assume_activate 已更名为 activate",
-            src: "assume_activate:true",
         });
     });
 });

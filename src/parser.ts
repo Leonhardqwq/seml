@@ -127,8 +127,8 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 			: [undefined, waveRangeToken];
 
 		const waveLength = parseNatural(waveLengthToken);
-		if (waveLength === null || waveLength < 601) {
-			return error(lineNum, "波长应为 ≥ 601 的整数", waveRangeToken);
+		if (waveLength === null || waveLength <= 0) {
+			return error(lineNum, "波长应为正整数", waveRangeToken);
 		}
 
 		let startTick: number | undefined;
@@ -749,7 +749,7 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
-	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined): null | Error {
+	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined, checkAcceptable: boolean = false): null | Error {
 	if (argName in args) {
 		return error(lineNum, "参数重复", argName);
 	}
@@ -784,8 +784,8 @@ export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: s
 			zombieType = parsedZombieType;
 		}
 
-		if (!acceptableZombieTypes.includes(zombieType)) {
-			return error(lineNum, `$无法指定此僵尸类型`, zombieTypeAbbr);
+		if (checkAcceptable && !acceptableZombieTypes.includes(zombieType)) {
+			return error(lineNum, `无法指定此僵尸类型`, zombieTypeAbbr);
 		}
 		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
 			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
@@ -844,9 +844,9 @@ export function parse(text: string) {
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
 			} else if (symbol.startsWith("require:")) {
-				parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene!, lineNum, line, args["ban"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene!, lineNum, line, args["ban"]?.[1], true);
 			} else if (symbol.startsWith("ban:")) {
-				parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene!, lineNum, line, args["require"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene!, lineNum, line, args["require"]?.[1], true);
 			} else if (symbol.startsWith("huge:")) {
 				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
 			} else if (symbol.startsWith("activate:")) {
@@ -855,6 +855,12 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
 			} else if (symbol.startsWith("natural:")) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
+			} else if (symbol.startsWith("cobDelay:")) {
+				parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
+			} else if (symbol.startsWith("types:")) {
+				parseResult = parseZombieTypeArg(args, "types", "-z", out.setting.originalScene!, lineNum, line, undefined);
+			} else if (symbol.startsWith("targetPos:")) {
+				parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
 			} else if (symbol.startsWith("avzTime:")) {
 				parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
 				if (!isError(parseResult)) {
