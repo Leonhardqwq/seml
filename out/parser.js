@@ -23,7 +23,7 @@ function parseWave(out, lineNum, line) {
         }
         else {
             const waveNum = (0, string_1.parseNatural)((0, string_1.chopPrefix)(waveNumToken, "w"));
-            if (waveNum === null || waveNum < 1 || waveNum > 9) {
+            if (waveNum === null || waveNum < 1 || waveNum > 99) {
                 return (0, error_1.error)(lineNum, "波数应为正整数", waveNumToken);
             }
             return waveNum;
@@ -45,8 +45,8 @@ function parseWave(out, lineNum, line) {
             ? [waveRangeToken.split("~")[0], waveRangeToken.split("~")[1]]
             : [undefined, waveRangeToken];
         const waveLength = (0, string_1.parseNatural)(waveLengthToken);
-        if (waveLength === null || waveLength < 601) {
-            return (0, error_1.error)(lineNum, "波长应为 ≥ 601 的整数", waveRangeToken);
+        if (waveLength === null || waveLength <= 0) {
+            return (0, error_1.error)(lineNum, "波长应为正整数", waveRangeToken);
         }
         let startTick;
         if (startTickToken !== undefined) {
@@ -584,7 +584,7 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
     return null;
 }
 exports.parseIntArg = parseIntArg;
-function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTypesStr) {
+function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTypesStr, checkAcceptable = false) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
     }
@@ -614,8 +614,8 @@ function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTy
             }
             zombieType = parsedZombieType;
         }
-        if (!zombie_types_1.acceptableZombieTypes.includes(zombieType)) {
-            return (0, error_1.error)(lineNum, `$无法指定此僵尸类型`, zombieTypeAbbr);
+        if (checkAcceptable && !zombie_types_1.acceptableZombieTypes.includes(zombieType)) {
+            return (0, error_1.error)(lineNum, `无法指定此僵尸类型`, zombieTypeAbbr);
         }
         if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
             return (0, error_1.error)(lineNum, "僵尸类型重复", zombieTypeAbbr);
@@ -646,6 +646,7 @@ exports.parseBoolArg = parseBoolArg;
 function parse(text) {
     const out = { setting: {}, waves: [] };
     const args = {};
+    let avzTime = false;
     const lines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
     if ((0, error_1.isError)(lines)) {
         return lines;
@@ -666,10 +667,10 @@ function parse(text) {
                 parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
             }
             else if (symbol.startsWith("require:")) {
-                parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene, lineNum, line, args["ban"]?.[1]);
+                parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene, lineNum, line, args["ban"]?.[1], true);
             }
             else if (symbol.startsWith("ban:")) {
-                parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene, lineNum, line, args["require"]?.[1]);
+                parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene, lineNum, line, args["require"]?.[1], true);
             }
             else if (symbol.startsWith("huge:")) {
                 parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
@@ -682,6 +683,21 @@ function parse(text) {
             }
             else if (symbol.startsWith("natural:")) {
                 parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
+            }
+            else if (symbol.startsWith("cobDelay:")) {
+                parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
+            }
+            else if (symbol.startsWith("types:")) {
+                parseResult = parseZombieTypeArg(args, "types", "-z", out.setting.originalScene, lineNum, line, undefined);
+            }
+            else if (symbol.startsWith("targetPos:")) {
+                parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
+            }
+            else if (symbol.startsWith("avzTime:")) {
+                parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
+                if (!(0, error_1.isError)(parseResult)) {
+                    avzTime = "avzTime" in args;
+                }
             }
             else if (symbol.startsWith("w")) {
                 parseResult = parseWave(out, lineNum, line);
@@ -704,8 +720,11 @@ function parse(text) {
             else if (symbol === "J") {
                 parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
-            else if (symbol === "a") {
+            else if (symbol === "a" || symbol === "W") {
                 parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.squash);
+            }
+            else if (symbol === "N") {
+                parseResult = parseFixedCard(out, lineNum, line, plant_types_1.PlantType.doomshroom);
             }
             else if (symbol === "A_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.cherryBomb);
@@ -713,7 +732,7 @@ function parse(text) {
             else if (symbol === "J_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.jalapeno);
             }
-            else if (symbol === "a_NUM") {
+            else if (symbol === "a_NUM" || symbol === "W_NUM") {
                 parseResult = parseSmartCard(out, lineNum, line, plant_types_1.PlantType.squash);
             }
             else if (symbol === "SET") {
@@ -728,6 +747,25 @@ function parse(text) {
         }
     }
     delete out.setting.variables;
+    delete args["avzTime"];
+    if (avzTime) {
+        for (const wave of out.waves) {
+            for (const action of wave.actions) {
+                if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
+                    action.time -= 1;
+                }
+                else if (action.op === "SmartCard" && ["A_NUM", "J_NUM", "a_NUM", "W_NUM"].includes(action.symbol)) {
+                    action.time -= 1;
+                }
+                else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
+                    action.time += 1;
+                    if (action.shovelTime !== undefined) {
+                        action.shovelTime += 1;
+                    }
+                }
+            }
+        }
+    }
     for (const wave of out.waves) {
         wave.actions.sort((a, b) => a.time - b.time);
     }
@@ -737,7 +775,7 @@ exports.parse = parse;
 function expandLines(lines) {
     const originalLines = lines.map((line, lineNum) => ({
         lineNum: lineNum + 1, line: line
-            .split("#")[0].trim() // ignore comments 
+            .split("#")[0].trim() // ignore comments
             .replace(/[ \t]+/g, ' ') // replace multiple spaces/tabs with one space
     }));
     const expandedLines = [];

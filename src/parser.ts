@@ -99,7 +99,7 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 		} else {
 			const waveNum = parseNatural(chopPrefix(waveNumToken, "w"));
 
-			if (waveNum === null || waveNum < 1 || waveNum > 9) {
+			if (waveNum === null || waveNum < 1 || waveNum > 99) {
 				return error(lineNum, "波数应为正整数", waveNumToken);
 			}
 
@@ -127,8 +127,8 @@ export function parseWave(out: ParserOutput, lineNum: number, line: string): nul
 			: [undefined, waveRangeToken];
 
 		const waveLength = parseNatural(waveLengthToken);
-		if (waveLength === null || waveLength < 601) {
-			return error(lineNum, "波长应为 ≥ 601 的整数", waveRangeToken);
+		if (waveLength === null || waveLength <= 0) {
+			return error(lineNum, "波长应为正整数", waveRangeToken);
 		}
 
 		let startTick: number | undefined;
@@ -749,7 +749,7 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 }
 
 export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
-	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined): null | Error {
+	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined, checkAcceptable: boolean = false): null | Error {
 	if (argName in args) {
 		return error(lineNum, "参数重复", argName);
 	}
@@ -784,8 +784,8 @@ export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: s
 			zombieType = parsedZombieType;
 		}
 
-		if (!acceptableZombieTypes.includes(zombieType)) {
-			return error(lineNum, `$无法指定此僵尸类型`, zombieTypeAbbr);
+		if (checkAcceptable && !acceptableZombieTypes.includes(zombieType)) {
+			return error(lineNum, `无法指定此僵尸类型`, zombieTypeAbbr);
 		}
 		if (zombieTypes.includes(zombieType) || prevTypes.includes(zombieType)) {
 			return error(lineNum, "僵尸类型重复", zombieTypeAbbr);
@@ -820,6 +820,8 @@ export function parseBoolArg(args: { [key: string]: string[] }, argName: string,
 export function parse(text: string) {
 	const out: ParserOutput = { setting: {}, waves: [] };
 	const args: { [key: string]: string[] } = {};
+	let avzTime = false;
+
 
 	const lines = expandLines(text.split(/\r?\n/)); // \r\n matches line break characters
 	if (isError(lines)) {
@@ -842,9 +844,9 @@ export function parse(text: string) {
 			} else if (symbol.startsWith("repeat:")) {
 				parseResult = parseIntArg(args, "repeat", "-r", lineNum, line);
 			} else if (symbol.startsWith("require:")) {
-				parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene!, lineNum, line, args["ban"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "require", "-req", out.setting.originalScene!, lineNum, line, args["ban"]?.[1], true);
 			} else if (symbol.startsWith("ban:")) {
-				parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene!, lineNum, line, args["require"]?.[1]);
+				parseResult = parseZombieTypeArg(args, "ban", "-ban", out.setting.originalScene!, lineNum, line, args["require"]?.[1], true);
 			} else if (symbol.startsWith("huge:")) {
 				parseResult = parseBoolArg(args, "huge", "-h", lineNum, line);
 			} else if (symbol.startsWith("activate:")) {
@@ -853,6 +855,17 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
 			} else if (symbol.startsWith("natural:")) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
+			} else if (symbol.startsWith("cobDelay:")) {
+				parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
+			} else if (symbol.startsWith("types:")) {
+				parseResult = parseZombieTypeArg(args, "types", "-z", out.setting.originalScene!, lineNum, line, undefined);
+			} else if (symbol.startsWith("targetPos:")) {
+				parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
+			} else if (symbol.startsWith("avzTime:")) {
+				parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
+				if (!isError(parseResult)) {
+					avzTime = "avzTime" in args;
+				}
 			} else if (symbol.startsWith("w")) {
 				parseResult = parseWave(out, lineNum, line);
 			} else if (/^(B|P|D)\d?$/.test(symbol.toUpperCase())) {
@@ -867,13 +880,15 @@ export function parse(text: string) {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.jalapeno);
-			} else if (symbol === "a") {
+			} else if (symbol === "a" || symbol === "W") {
 				parseResult = parseFixedCard(out, lineNum, line, PlantType.squash);
+			} else if (symbol === "N") {
+				parseResult = parseFixedCard(out, lineNum, line, PlantType.doomshroom);
 			} else if (symbol === "A_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.cherryBomb);
 			} else if (symbol === "J_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.jalapeno);
-			} else if (symbol === "a_NUM") {
+			} else if (symbol === "a_NUM" || symbol === "W_NUM") {
 				parseResult = parseSmartCard(out, lineNum, line, PlantType.squash);
 			} else if (symbol === "SET") {
 				parseResult = parseSet(out, lineNum, line);
@@ -888,6 +903,23 @@ export function parse(text: string) {
 	}
 
 	delete out.setting.variables;
+	delete args["avzTime"];
+	if (avzTime) {
+		for (const wave of out.waves) {
+			for (const action of wave.actions) {
+				if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
+					(action as { time: number }).time -= 1;
+				} else if (action.op === "SmartCard" && ["A_NUM", "J_NUM", "a_NUM", "W_NUM"].includes(action.symbol)) {
+					(action as { time: number }).time -= 1;
+				} else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
+					(action as { time: number }).time += 1;
+					if (action.shovelTime !== undefined) {
+						(action as { shovelTime: number }).shovelTime += 1;
+					}
+				}
+			}
+		}
+	}
 	for (const wave of out.waves) {
 		wave.actions.sort((a, b) => a.time - b.time);
 	}
@@ -905,7 +937,7 @@ export function expandLines(lines: string[]): Line[] | Error {
 	const originalLines: Line[] = lines.map((line, lineNum) =>
 	({
 		lineNum: lineNum + 1, line: line
-			.split("#")[0]!.trim() 		// ignore comments 
+			.split("#")[0]!.trim() 		// ignore comments
 			.replace(/[ \t]+/g, ' ')   	// replace multiple spaces/tabs with one space
 	}));
 	const expandedLines: Line[] = [];

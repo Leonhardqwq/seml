@@ -3,7 +3,7 @@
   "name": "seml",
   "displayName": "Seml",
   "description": "Syntax highlighting and parsing for Survival Endless Markup Language.",
-  "version": "1.5.13",
+  "version": "1.16.0",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.82.0"
@@ -71,6 +71,18 @@
       {
         "command": "seml.usePogoTemplate",
         "title": "Seml: 使用跳跳模板 (use pogo template)"
+      },
+      {
+        "command": "seml.testPos",
+        "title": "Seml: 测试坐标分布 (test pos)"
+      },
+      {
+        "command": "seml.usePosTemplate",
+        "title": "Seml: 使用坐标分布模板 (use pos template)"
+      },
+      {
+        "command": "seml.testBlocks",
+        "title": "Seml: 测试代码块 (test blocks)"
       }
     ]
   },
@@ -79,7 +91,7 @@
     "url": "https://github.com/Rottenham/seml"
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile && .\\copy_binaries.bat",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",

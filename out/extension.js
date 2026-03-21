@@ -8,6 +8,31 @@ const error_1 = require("./error");
 const parser_1 = require("./parser");
 const child_process_1 = require("child_process");
 const templates_1 = require("./templates");
+const block_extractor_1 = require("./block_extractor");
+function executeTestFromText(text, testName, baseName, dirName, lineOffset) {
+    const parsedOutput = (0, parser_1.parse)(text);
+    if ((0, error_1.isError)(parsedOutput)) {
+        const lineNum = parsedOutput.lineNum + lineOffset;
+        vscode.window.showErrorMessage(`[第${lineNum}行] ${parsedOutput.msg}: ${parsedOutput.src}`);
+        return;
+    }
+    const { out, args } = parsedOutput;
+    const jsonOutput = JSON.stringify(out, null, 4);
+    const jsonFilePath = path.join(dirName, `${baseName}.json`);
+    const destDirName = path.join(dirName, "dest");
+    if (!fs.existsSync(destDirName)) {
+        fs.mkdirSync(destDirName);
+    }
+    fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
+        if (err) {
+            vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
+            return;
+        }
+        runBinary(`${testName.toLowerCase()}_test.exe`, [...Object.values(args).flatMap(x => x),
+            "-f", jsonFilePath,
+            "-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)], jsonFilePath);
+    });
+}
 function runBinary(filename, args, jsonFilePath) {
     const binaryPath = path.join(__dirname, "bin", filename);
     (0, child_process_1.execFile)(binaryPath, args, (err, stdout, stderr) => {
@@ -88,31 +113,22 @@ function activate(context) {
             });
         });
     }));
-    for (const testName of ["Smash", "Explode", "Refresh", "Pogo"]) {
+    for (const testName of ["Smash", "Explode", "Refresh", "Pogo", "Pos"]) {
         context.subscriptions.push(vscode.commands.registerCommand(`seml.test${testName}`, () => {
             const editor = vscode.window.activeTextEditor;
             if (editor === undefined) {
                 vscode.window.showErrorMessage(`请先打开文件`);
                 return;
             }
-            const compiledJson = compileToJson(editor.document);
-            if (compiledJson === undefined) {
+            const doc = editor.document;
+            const semlFilePath = doc.uri.fsPath;
+            if (path.extname(semlFilePath) !== ".seml") {
+                vscode.window.showErrorMessage("请打开 .seml 文件");
                 return;
             }
-            const { dirName, baseName, jsonFilePath, jsonOutput, args } = compiledJson;
-            const destDirName = path.join(dirName, "dest");
-            if (!fs.existsSync(destDirName)) {
-                fs.mkdirSync(destDirName);
-            }
-            fs.writeFile(jsonFilePath, jsonOutput, "utf8", function (err) {
-                if (err) {
-                    vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
-                    return;
-                }
-                runBinary(`${testName.toLowerCase()}_test.exe`, [...Object.values(args).flatMap(x => x),
-                    "-f", jsonFilePath,
-                    "-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)], jsonFilePath);
-            });
+            const dirName = path.dirname(semlFilePath);
+            const baseName = path.basename(semlFilePath, ".seml");
+            executeTestFromText(doc.getText(), testName, baseName, dirName, 0);
         }));
         context.subscriptions.push(vscode.commands.registerCommand(`seml.use${testName}Template`, () => {
             const editor = vscode.window.activeTextEditor;
@@ -139,6 +155,55 @@ function activate(context) {
             }
         }));
     }
+    context.subscriptions.push(vscode.commands.registerCommand('seml.testBlocks', () => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor === undefined) {
+            vscode.window.showErrorMessage(`请先打开文件`);
+            return;
+        }
+        const doc = editor.document;
+        const text = doc.getText();
+        const filePath = doc.uri.fsPath;
+        const dirName = path.dirname(filePath);
+        const sourceBaseName = path.basename(filePath, path.extname(filePath));
+        const blocks = (0, block_extractor_1.extractSemlBlocks)(text);
+        const errors = [];
+        const testableBlocks = [];
+        for (const block of blocks) {
+            if ((0, error_1.isError)(block)) {
+                errors.push(block);
+            }
+            else {
+                testableBlocks.push(block);
+            }
+        }
+        if (testableBlocks.length === 0 && errors.length === 0) {
+            vscode.window.showErrorMessage("未找到可测试的 seml 代码块");
+            return;
+        }
+        for (const err of errors) {
+            vscode.window.showErrorMessage(`[第${err.lineNum}行] ${err.msg}: ${err.src}`);
+        }
+        const usedNames = new Set();
+        const resolvedNames = [];
+        for (let i = 0; i < testableBlocks.length; i++) {
+            const block = testableBlocks[i];
+            let baseName = block.name ?? `${sourceBaseName}_${i + 1}`;
+            let suffix = 1;
+            let finalName = baseName;
+            while (usedNames.has(finalName)) {
+                suffix++;
+                finalName = `${baseName}_${suffix}`;
+            }
+            usedNames.add(finalName);
+            resolvedNames.push(finalName);
+        }
+        for (let i = 0; i < testableBlocks.length; i++) {
+            const block = testableBlocks[i];
+            const baseName = resolvedNames[i];
+            executeTestFromText(block.content, block.type, baseName, dirName, block.startLine - 1);
+        }
+    }));
 }
 exports.activate = activate;
 function deactivate() { }
