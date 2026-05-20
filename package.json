@@ -3,7 +3,7 @@
   "name": "seml",
   "displayName": "Seml",
   "description": "Syntax highlighting and parsing for Survival Endless Markup Language.",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.82.0"
@@ -57,6 +57,10 @@
         "title": "Seml: 测试跳跳 (test pogo)"
       },
       {
+        "command": "seml.testImp",
+        "title": "Seml: 测试小鬼拦截 (test imp)"
+      },
+      {
         "command": "seml.useSmashTemplate",
         "title": "Seml: 使用砸率模板 (use smash template)"
       },
@@ -71,6 +75,10 @@
       {
         "command": "seml.usePogoTemplate",
         "title": "Seml: 使用跳跳模板 (use pogo template)"
+      },
+      {
+        "command": "seml.useImpTemplate",
+        "title": "Seml: 使用小鬼拦截模板 (use imp template)"
       },
       {
         "command": "seml.testPos",

@@ -20,6 +20,10 @@ describe("parseBlockHeader", () => {
         const result = (0, block_extractor_1.parseBlockHeader)('type=pogo name="my test"', 1);
         (0, chai_1.expect)(result).to.deep.equal({ type: "pogo", name: "my test" });
     });
+    it("should parse imp type", () => {
+        const result = (0, block_extractor_1.parseBlockHeader)("type=imp name=test", 1);
+        (0, chai_1.expect)(result).to.deep.equal({ type: "imp", name: "test" });
+    });
     it("should return an error if type is missing", () => {
         (0, chai_1.expect)((0, block_extractor_1.parseBlockHeader)("name=test", 1)).to.deep.equal((0, error_1.error)(1, "缺少 type 属性", "name=test"));
     });

@@ -23,6 +23,11 @@ describe("parseBlockHeader", () => {
 		expect(result).to.deep.equal({ type: "pogo", name: "my test" });
 	});
 
+	it("should parse imp type", () => {
+		const result = parseBlockHeader("type=imp name=test", 1);
+		expect(result).to.deep.equal({ type: "imp", name: "test" });
+	});
+
 	it("should return an error if type is missing", () => {
 		expect(parseBlockHeader("name=test", 1)).to.deep.equal(
 			error(1, "缺少 type 属性", "name=test")

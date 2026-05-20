@@ -2,7 +2,7 @@
 import { error } from "../../error";
 import {
     parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
-    parseSet, parseScene, parseProtect, parseIntArg, parseZombieTypeArg, parseBoolArg,
+    parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseZombieTypeArg, parseBoolArg,
     expandLines, replaceVariables
 } from '../../parser';
 import { PlantType } from "../../plant_types";
@@ -976,6 +976,66 @@ describe("parseProtect", () => {
 
 });
 
+describe("parseImpIndex", () => {
+    let out: ParserOutput;
+
+    beforeEach(() => {
+        out = { setting: {}, waves: [] };
+    });
+
+    it("should parse fixed imp index modes", () => {
+        expect(parseImpIndex(out, 1, "impIndex:high")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "High" });
+
+        out = { setting: {}, waves: [] };
+        expect(parseImpIndex(out, 1, "impIndex:low")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Low" });
+
+        out = { setting: {}, waves: [] };
+        expect(parseImpIndex(out, 1, "impIndex:native")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Native" });
+    });
+
+    it("should parse ratio mode", () => {
+        expect(parseImpIndex(out, 1, "impIndex:ratio")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Ratio", highRatio: 0.5 });
+
+        out = { setting: {}, waves: [] };
+        expect(parseImpIndex(out, 1, "impIndex:ratio 0")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Ratio", highRatio: 0 });
+
+        out = { setting: {}, waves: [] };
+        expect(parseImpIndex(out, 1, "impIndex:ratio 1")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Ratio", highRatio: 1 });
+
+        out = { setting: {}, waves: [] };
+        expect(parseImpIndex(out, 1, "impIndex:ratio 0.75")).to.equal(null);
+        expect(out.setting.impIndex).to.deep.equal({ mode: "Ratio", highRatio: 0.75 });
+    });
+
+    it("should return an error for invalid imp index settings", () => {
+        expect(parseImpIndex(out, 1, "impIndex:middle"))
+            .to.deep.equal(error(1, "impIndex 模式应为 native/high/low/ratio", "middle"));
+
+        expect(parseImpIndex({ setting: {}, waves: [] }, 1, "impIndex:ratio -0.1"))
+            .to.deep.equal(error(1, "impIndex:ratio 的比例应为 0~1 的数字", "-0.1"));
+        expect(parseImpIndex({ setting: {}, waves: [] }, 1, "impIndex:ratio 1.1"))
+            .to.deep.equal(error(1, "impIndex:ratio 的比例应为 0~1 的数字", "1.1"));
+        expect(parseImpIndex({ setting: {}, waves: [] }, 1, "impIndex:ratio abc"))
+            .to.deep.equal(error(1, "impIndex:ratio 的比例应为 0~1 的数字", "abc"));
+        expect(parseImpIndex({ setting: {}, waves: [] }, 1, "impIndex:ratio 0.5 0.6"))
+            .to.deep.equal(error(1, "impIndex:ratio 只接受一个可选比例", "0.6"));
+        expect(parseImpIndex({ setting: {}, waves: [] }, 1, "impIndex:high 0.5"))
+            .to.deep.equal(error(1, "high 模式不接受额外参数", "0.5"));
+    });
+
+    it("should return an error if impIndex is duplicated", () => {
+        expect(parseImpIndex(out, 1, "impIndex:high")).to.equal(null);
+        expect(parseImpIndex(out, 2, "impIndex:low"))
+            .to.deep.equal(error(2, "设置重复", "impIndex"));
+    });
+});
+
 describe("parseIntArg", () => {
     let args: { [key: string]: string[] };
 
@@ -1454,6 +1514,19 @@ describe("parse", () => {
             });
     });
 
+    it("should parse impIndex into setting", () => {
+        expect(parse("scene:PE\nimpIndex:ratio 0.75\nw1 601\n"))
+            .to.have.property("out").that.deep.equal({
+                setting: { scene: "FE", originalScene: "PE", impIndex: { mode: "Ratio", highRatio: 0.75 } },
+                waves: [{
+                    iceTimes: [],
+                    waveLength: 601,
+                    actions: [],
+                    startTick: undefined,
+                }],
+            });
+    });
+
     it("should ignore comments and multiple contiguous spaces/tabs", () => {
         expect(parse("w1 \t1    601 # this is a comment\nP 300 2 9\n"))
             .to.have.property("out").that.deep.equal({
@@ -1487,6 +1560,28 @@ describe("parse", () => {
             msg: "未知符号",
             src: "X (使用帮助: https://marketplace.visualstudio.com/items?itemName=Crescendo.seml)",
         });
+    });
+
+    it("should parse types into args and setting", () => {
+        expect(parse("scene:PE\ntypes:garg giga\nw1 601\n"))
+            .to.deep.equal({
+                out: {
+                    setting: {
+                        scene: "FE",
+                        originalScene: "PE",
+                        types: [ZombieType.gargantuar, ZombieType.gigaGargantuar],
+                    },
+                    waves: [{
+                        iceTimes: [],
+                        waveLength: 601,
+                        actions: [],
+                        startTick: undefined,
+                    }],
+                },
+                args: {
+                    types: ["-z", [ZombieType.gargantuar, ZombieType.gigaGargantuar].join(",")],
+                },
+            });
     });
 });
 

@@ -69,6 +69,12 @@ type ProtectPos = {
 } & Position;
 
 type Scene = "DE" | "NE" | "PE" | "FE" | "RE" | "ME";
+type ImpIndexMode = "Native" | "High" | "Low" | "Ratio";
+
+type ImpIndex = {
+	readonly mode: ImpIndexMode,
+	readonly highRatio?: number,
+};
 
 function isScene(value: string): value is Scene {
 	return ["DE", "NE", "PE", "FE", "RE", "ME"].includes(value);
@@ -79,6 +85,8 @@ export type ParserOutput = {
 		protect?: ProtectPos[],
 		originalScene?: Scene,
 		scene?: "NE" | "FE" | "ME",
+		types?: number[],
+		impIndex?: ImpIndex,
 		variables?: { [key: string]: number },
 	},
 	waves: Wave[],
@@ -733,6 +741,49 @@ export function parseProtect(out: ParserOutput, lineNum: number, line: string): 
 	return null;
 }
 
+export function parseImpIndex(out: ParserOutput, lineNum: number, line: string): null | Error {
+	if ("impIndex" in out.setting) {
+		return error(lineNum, "设置重复", "impIndex");
+	}
+
+	const value = line.split(":").slice(1).join(":").trim();
+	if (value.length === 0) {
+		return error(lineNum, "impIndex 的值不可为空", line);
+	}
+
+	const tokens = value.split(" ").filter(token => token.length > 0);
+	const modeToken = tokens[0]!.toLowerCase();
+	const modeMap: { [key: string]: ImpIndexMode } = {
+		native: "Native",
+		high: "High",
+		low: "Low",
+		ratio: "Ratio",
+	};
+	const mode = modeMap[modeToken];
+	if (mode === undefined) {
+		return error(lineNum, "impIndex 模式应为 native/high/low/ratio", tokens[0]!);
+	}
+
+	if (mode !== "Ratio") {
+		if (tokens.length > 1) {
+			return error(lineNum, `${modeToken} 模式不接受额外参数`, tokens.slice(1).join(" "));
+		}
+		out.setting.impIndex = { mode };
+		return null;
+	}
+
+	if (tokens.length > 2) {
+		return error(lineNum, "impIndex:ratio 只接受一个可选比例", tokens.slice(2).join(" "));
+	}
+
+	const highRatio = tokens[1] === undefined ? 0.5 : parseDecimal(tokens[1]);
+	if (highRatio === null || highRatio < 0 || highRatio > 1) {
+		return error(lineNum, "impIndex:ratio 的比例应为 0~1 的数字", tokens[1] ?? "");
+	}
+	out.setting.impIndex = { mode, highRatio };
+	return null;
+}
+
 export function parseIntArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
 	lineNum: number, line: string): null | Error {
 	if (argName in args) {
@@ -857,8 +908,16 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
 			} else if (symbol.startsWith("cobDelay:")) {
 				parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
+			} else if (symbol.startsWith("impIndex:")) {
+				parseResult = parseImpIndex(out, lineNum, line);
 			} else if (symbol.startsWith("types:")) {
 				parseResult = parseZombieTypeArg(args, "types", "-z", out.setting.originalScene!, lineNum, line, undefined);
+				if (!isError(parseResult)) {
+					const typesArg = args["types"]?.[1];
+					if (typesArg !== undefined) {
+						out.setting.types = typesArg.split(",").map(type => parseInt(type));
+					}
+				}
 			} else if (symbol.startsWith("targetPos:")) {
 				parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
 			} else if (symbol.startsWith("avzTime:")) {

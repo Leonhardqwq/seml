@@ -21,7 +21,7 @@ function parseBlockHeader(header, lineNum) {
     if (type === undefined) {
         return (0, error_1.error)(lineNum, "缺少 type 属性", header);
     }
-    if (type !== "smash" && type !== "explode" && type !== "refresh" && type !== "pogo" && type !== "pos") {
+    if (type !== "smash" && type !== "explode" && type !== "refresh" && type !== "pogo" && type !== "pos" && type !== "imp") {
         return (0, error_1.error)(lineNum, "无效的测试类型", type);
     }
     if (name !== undefined) {

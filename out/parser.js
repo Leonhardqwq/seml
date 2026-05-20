@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -571,6 +571,44 @@ function parseProtect(out, lineNum, line) {
     return null;
 }
 exports.parseProtect = parseProtect;
+function parseImpIndex(out, lineNum, line) {
+    if ("impIndex" in out.setting) {
+        return (0, error_1.error)(lineNum, "设置重复", "impIndex");
+    }
+    const value = line.split(":").slice(1).join(":").trim();
+    if (value.length === 0) {
+        return (0, error_1.error)(lineNum, "impIndex 的值不可为空", line);
+    }
+    const tokens = value.split(" ").filter(token => token.length > 0);
+    const modeToken = tokens[0].toLowerCase();
+    const modeMap = {
+        native: "Native",
+        high: "High",
+        low: "Low",
+        ratio: "Ratio",
+    };
+    const mode = modeMap[modeToken];
+    if (mode === undefined) {
+        return (0, error_1.error)(lineNum, "impIndex 模式应为 native/high/low/ratio", tokens[0]);
+    }
+    if (mode !== "Ratio") {
+        if (tokens.length > 1) {
+            return (0, error_1.error)(lineNum, `${modeToken} 模式不接受额外参数`, tokens.slice(1).join(" "));
+        }
+        out.setting.impIndex = { mode };
+        return null;
+    }
+    if (tokens.length > 2) {
+        return (0, error_1.error)(lineNum, "impIndex:ratio 只接受一个可选比例", tokens.slice(2).join(" "));
+    }
+    const highRatio = tokens[1] === undefined ? 0.5 : (0, string_1.parseDecimal)(tokens[1]);
+    if (highRatio === null || highRatio < 0 || highRatio > 1) {
+        return (0, error_1.error)(lineNum, "impIndex:ratio 的比例应为 0~1 的数字", tokens[1] ?? "");
+    }
+    out.setting.impIndex = { mode, highRatio };
+    return null;
+}
+exports.parseImpIndex = parseImpIndex;
 function parseIntArg(args, argName, argFlag, lineNum, line) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
@@ -687,8 +725,17 @@ function parse(text) {
             else if (symbol.startsWith("cobDelay:")) {
                 parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
             }
+            else if (symbol.startsWith("impIndex:")) {
+                parseResult = parseImpIndex(out, lineNum, line);
+            }
             else if (symbol.startsWith("types:")) {
                 parseResult = parseZombieTypeArg(args, "types", "-z", out.setting.originalScene, lineNum, line, undefined);
+                if (!(0, error_1.isError)(parseResult)) {
+                    const typesArg = args["types"]?.[1];
+                    if (typesArg !== undefined) {
+                        out.setting.types = typesArg.split(",").map(type => parseInt(type));
+                    }
+                }
             }
             else if (symbol.startsWith("targetPos:")) {
                 parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
