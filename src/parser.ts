@@ -799,6 +799,20 @@ export function parseIntArg(args: { [key: string]: string[] }, argName: string, 
 	return null;
 }
 
+export function parseTargetPosArg(args: { [key: string]: string[] }, lineNum: number, line: string): null | Error {
+	if ("targetPos" in args) {
+		return error(lineNum, "参数重复", "targetPos");
+	}
+
+	const value = line.split(":").slice(1).join(":").trim();
+	if (!/^-?\d+$/.test(value)) {
+		return error(lineNum, "targetPos 的值应为整数", value);
+	}
+
+	args["targetPos"] = ["-x", value];
+	return null;
+}
+
 export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
 	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined, checkAcceptable: boolean = false): null | Error {
 	if (argName in args) {
@@ -919,7 +933,7 @@ export function parse(text: string) {
 					}
 				}
 			} else if (symbol.startsWith("targetPos:")) {
-				parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
+				parseResult = parseTargetPosArg(args, lineNum, line);
 			} else if (symbol.startsWith("avzTime:")) {
 				parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
 				if (!isError(parseResult)) {

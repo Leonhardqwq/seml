@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseTargetPosArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -622,6 +622,18 @@ function parseIntArg(args, argName, argFlag, lineNum, line) {
     return null;
 }
 exports.parseIntArg = parseIntArg;
+function parseTargetPosArg(args, lineNum, line) {
+    if ("targetPos" in args) {
+        return (0, error_1.error)(lineNum, "参数重复", "targetPos");
+    }
+    const value = line.split(":").slice(1).join(":").trim();
+    if (!/^-?\d+$/.test(value)) {
+        return (0, error_1.error)(lineNum, "targetPos 的值应为整数", value);
+    }
+    args["targetPos"] = ["-x", value];
+    return null;
+}
+exports.parseTargetPosArg = parseTargetPosArg;
 function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTypesStr, checkAcceptable = false) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
@@ -738,7 +750,7 @@ function parse(text) {
                 }
             }
             else if (symbol.startsWith("targetPos:")) {
-                parseResult = parseIntArg(args, "targetPos", "-x", lineNum, line);
+                parseResult = parseTargetPosArg(args, lineNum, line);
             }
             else if (symbol.startsWith("avzTime:")) {
                 parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
