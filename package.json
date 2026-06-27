@@ -104,7 +104,9 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "mocha out/test/**/*.test.js",
-    "coverage": "nyc --reporter=lcov --reporter=text-summary npm test"
+    "coverage": "nyc --reporter=lcov --reporter=text-summary npm test",
+    "eg:test": "node examples/run-seml-test.js",
+    "eg:test:list": "node examples/run-seml-test.js --list"
   },
   "devDependencies": {
     "@types/chai": "^4.3.6",

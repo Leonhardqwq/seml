@@ -1,0 +1,10 @@
+scene:PE
+protect:24 54 13 63 15 65
+repeat:20000
+types:红
+impIndex:ratio 0.5
+
+w 11 2011 5000
+PP 1800 15 8.225
+PP 3800 15 8.225
+DD +328 15 4

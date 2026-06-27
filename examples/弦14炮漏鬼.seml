@@ -1,0 +1,10 @@
+scene:PE
+repeat:200000
+types:红白
+impIndex:ratio 0.5
+
+SET len 875+400
+# 7.1125 伤红 全拦，7.1不伤红 拦不全
+w len
+PP 675 25 8.225
+DD +116 15 7.1125

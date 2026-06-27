@@ -1,0 +1,9 @@
+scene:PE
+types:豚
+repeat:20000
+targetPos:450 
+# 啃 c 列普: 80c - 20
+# 啃 c 列炮: 80c - 30
+protect:38' 48'
+
+w 0 2000

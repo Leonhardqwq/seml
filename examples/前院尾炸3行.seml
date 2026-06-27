@@ -1,0 +1,33 @@
+scene:DE
+protect:14 24 34 44 54
+repeat:50000
+types:白
+impIndex:ratio 0.5
+
+# 樱桃代尾炸只能放平地34列，天台4列以右
+# 通常波本波巨人减速尾炸394+有伤，原速尾炸265+有伤，由于巨人走得越远小鬼落地越早所以对前波红拦截时机要进一步提前（230左右）
+# 前院尾炸三行无伤最早激活时机：241，d +264 炸 3.5 左右
+# 导致尾炸有伤的因素：巨人过于分散，例如处理多波小鬼，长冰波的尾炸
+
+SET DELAY 265
+SET ACTIVE 225
+
+w 601
+PP ACTIVE 14 9 
+DD +DELAY 24 3.5
+
+w 601
+PP ACTIVE 14 9 
+DD +DELAY 24 3.5
+
+w 601
+PP ACTIVE 14 9 
+DD +DELAY 24 3.5
+
+w 601
+PP ACTIVE 14 9 
+DD +DELAY 24 3.5
+
+w 601
+PP ACTIVE 14 9 
+DD +DELAY 24 3.5
