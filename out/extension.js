@@ -9,6 +9,49 @@ const parser_1 = require("./parser");
 const child_process_1 = require("child_process");
 const templates_1 = require("./templates");
 const block_extractor_1 = require("./block_extractor");
+function resolveBinaryPath(testName) {
+    const binaryName = `${testName.toLowerCase()}_test`;
+    if (process.platform === "win32") {
+        return path.join(__dirname, "bin", `${binaryName}.exe`);
+    }
+    if (process.platform === "darwin") {
+        return path.join(__dirname, "bin", "darwin", binaryName);
+    }
+    return undefined;
+}
+function getBinaryError(binaryPath) {
+    if (binaryPath === undefined) {
+        return `不支持当前系统: ${process.platform}`;
+    }
+    if (!fs.existsSync(binaryPath)) {
+        return `未找到测试二进制: ${binaryPath}`;
+    }
+    if (process.platform !== "win32") {
+        try {
+            fs.accessSync(binaryPath, fs.constants.X_OK);
+        }
+        catch {
+            return `测试二进制没有执行权限: ${binaryPath}`;
+        }
+    }
+    return undefined;
+}
+function extractOutputFile(stdout) {
+    const regex = /输出文件已保存至 (.+)\.\s+?耗时/;
+    const match = stdout.match(regex);
+    return match?.[1];
+}
+function formatExecError(err, binaryPath) {
+    const code = err.code === undefined ? "" : String(err.code);
+    const message = err.message;
+    if (code === "EACCES") {
+        return `测试二进制没有执行权限: ${binaryPath}`;
+    }
+    if (code === "ENOEXEC" || message.includes("Bad CPU type") || message.includes("Exec format")) {
+        return `测试二进制架构不兼容或格式错误: ${binaryPath}`;
+    }
+    return `出错: ${err}`;
+}
 function executeTestFromText(text, testName, baseName, dirName, lineOffset) {
     const parsedOutput = (0, parser_1.parse)(text);
     if ((0, error_1.isError)(parsedOutput)) {
@@ -28,16 +71,21 @@ function executeTestFromText(text, testName, baseName, dirName, lineOffset) {
             vscode.window.showErrorMessage(`JSON 保存失败: ${err}`);
             return;
         }
-        runBinary(`${testName.toLowerCase()}_test.exe`, [...Object.values(args).flatMap(x => x),
+        runBinary(testName, [...Object.values(args).flatMap(x => x),
             "-f", jsonFilePath,
             "-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)], jsonFilePath);
     });
 }
-function runBinary(filename, args, jsonFilePath) {
-    const binaryPath = path.join(__dirname, "bin", filename);
+function runBinary(testName, args, jsonFilePath) {
+    const binaryPath = resolveBinaryPath(testName);
+    const binaryError = getBinaryError(binaryPath);
+    if (binaryError !== undefined) {
+        vscode.window.showErrorMessage(binaryError);
+        return;
+    }
     (0, child_process_1.execFile)(binaryPath, args, (err, stdout, stderr) => {
         if (err) {
-            vscode.window.showErrorMessage(`出错: ${err}`);
+            vscode.window.showErrorMessage(formatExecError(err, binaryPath));
             return;
         }
         if (stderr) {
@@ -52,12 +100,11 @@ function runBinary(filename, args, jsonFilePath) {
         });
         vscode.window.showInformationMessage(`${stdout}`, "打开文件").then(selection => {
             if (selection === "打开文件") {
-                const regex = /输出文件已保存至 (.+).\s+?耗时/;
-                const match = stdout.match(regex);
-                if (match !== null) {
-                    (0, child_process_1.exec)(`start "" "${match[1]}"`, (error) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`无法打开文件: ${error.message}`);
+                const outputFile = extractOutputFile(stdout);
+                if (outputFile !== undefined) {
+                    vscode.env.openExternal(vscode.Uri.file(outputFile)).then(success => {
+                        if (!success) {
+                            vscode.window.showErrorMessage(`无法打开文件: ${outputFile}`);
                         }
                     });
                 }

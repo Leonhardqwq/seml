@@ -4,10 +4,55 @@ import * as path from 'path';
 
 import { isError, Error as SemlError } from './error';
 import { parse } from './parser';
-import { exec, execFile, ExecFileException } from 'child_process';
+import { execFile, ExecFileException } from 'child_process';
 import { templates } from './templates';
 import { extractSemlBlocks, SemlBlock } from './block_extractor';
 
+function resolveBinaryPath(testName: string): string | undefined {
+	const binaryName = `${testName.toLowerCase()}_test`;
+	if (process.platform === "win32") {
+		return path.join(__dirname, "bin", `${binaryName}.exe`);
+	}
+	if (process.platform === "darwin") {
+		return path.join(__dirname, "bin", "darwin", binaryName);
+	}
+	return undefined;
+}
+
+function getBinaryError(binaryPath: string | undefined): string | undefined {
+	if (binaryPath === undefined) {
+		return `不支持当前系统: ${process.platform}`;
+	}
+	if (!fs.existsSync(binaryPath)) {
+		return `未找到测试二进制: ${binaryPath}`;
+	}
+	if (process.platform !== "win32") {
+		try {
+			fs.accessSync(binaryPath, fs.constants.X_OK);
+		} catch {
+			return `测试二进制没有执行权限: ${binaryPath}`;
+		}
+	}
+	return undefined;
+}
+
+function extractOutputFile(stdout: string): string | undefined {
+	const regex = /输出文件已保存至 (.+)\.\s+?耗时/;
+	const match = stdout.match(regex);
+	return match?.[1];
+}
+
+function formatExecError(err: ExecFileException, binaryPath: string): string {
+	const code = err.code === undefined ? "" : String(err.code);
+	const message = err.message;
+	if (code === "EACCES") {
+		return `测试二进制没有执行权限: ${binaryPath}`;
+	}
+	if (code === "ENOEXEC" || message.includes("Bad CPU type") || message.includes("Exec format")) {
+		return `测试二进制架构不兼容或格式错误: ${binaryPath}`;
+	}
+	return `出错: ${err}`;
+}
 
 function executeTestFromText(text: string, testName: string, baseName: string, dirName: string, lineOffset: number) {
 	const parsedOutput = parse(text);
@@ -32,7 +77,7 @@ function executeTestFromText(text: string, testName: string, baseName: string, d
 			return;
 		}
 
-		runBinary(`${testName.toLowerCase()}_test.exe`,
+		runBinary(testName,
 			[...Object.values(args).flatMap(x => x),
 				"-f", jsonFilePath,
 				"-o", path.join(destDirName, baseName + `_${testName.toLowerCase()}`)],
@@ -40,12 +85,17 @@ function executeTestFromText(text: string, testName: string, baseName: string, d
 	});
 }
 
-function runBinary(filename: string, args: string[], jsonFilePath: string) {
-	const binaryPath = path.join(__dirname, "bin", filename);
+function runBinary(testName: string, args: string[], jsonFilePath: string) {
+	const binaryPath = resolveBinaryPath(testName);
+	const binaryError = getBinaryError(binaryPath);
+	if (binaryError !== undefined) {
+		vscode.window.showErrorMessage(binaryError);
+		return;
+	}
 
-	execFile(binaryPath, args, (err: ExecFileException | null, stdout: string, stderr: string) => {
+	execFile(binaryPath!, args, (err: ExecFileException | null, stdout: string, stderr: string) => {
 		if (err) {
-			vscode.window.showErrorMessage(`出错: ${err}`);
+			vscode.window.showErrorMessage(formatExecError(err, binaryPath!));
 			return;
 		}
 		if (stderr) {
@@ -62,12 +112,11 @@ function runBinary(filename: string, args: string[], jsonFilePath: string) {
 
 		vscode.window.showInformationMessage(`${stdout}`, "打开文件").then(selection => {
 			if (selection === "打开文件") {
-				const regex = /输出文件已保存至 (.+).\s+?耗时/;
-				const match = stdout.match(regex);
-				if (match !== null) {
-					exec(`start "" "${match[1]}"`, (error) => {
-						if (error) {
-							vscode.window.showErrorMessage(`无法打开文件: ${error.message}`);
+				const outputFile = extractOutputFile(stdout);
+				if (outputFile !== undefined) {
+					vscode.env.openExternal(vscode.Uri.file(outputFile)).then(success => {
+						if (!success) {
+							vscode.window.showErrorMessage(`无法打开文件: ${outputFile}`);
 						}
 					});
 				} else {
