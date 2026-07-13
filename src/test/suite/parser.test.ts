@@ -2,7 +2,7 @@
 import { error } from "../../error";
 import {
     parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
-    parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseZombieTypeArg, parseBoolArg,
+    parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseTargetPosArg, parseZombieTypeArg, parseBoolArg,
     expandLines, replaceVariables
 } from '../../parser';
 import { PlantType } from "../../plant_types";
@@ -1132,26 +1132,36 @@ describe("parseZombieTypeArg", () => {
 	});
 });
 
-describe("parseIntArg (targetPos)", () => {
+describe("parseTargetPosArg", () => {
 	let args: { [key: string]: string[] };
 
 	beforeEach(() => {
 		args = {};
 	});
 
-	it("should parse targetPos", () => {
-		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
+	it("should parse positive targetPos", () => {
+		expect(parseTargetPosArg(args, 1, "targetPos:400")).to.equal(null);
 		expect(args).to.deep.equal({ targetPos: ["-x", "400"] });
 	});
 
-	it("should return an error if targetPos is not a positive integer", () => {
-		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:0"))
-			.to.deep.equal(error(1, "targetPos 的值应为正整数", "0"));
+	it("should parse zero targetPos", () => {
+		expect(parseTargetPosArg(args, 1, "targetPos:0")).to.equal(null);
+		expect(args).to.deep.equal({ targetPos: ["-x", "0"] });
+	});
+
+	it("should parse negative targetPos", () => {
+		expect(parseTargetPosArg(args, 1, "targetPos:-100")).to.equal(null);
+		expect(args).to.deep.equal({ targetPos: ["-x", "-100"] });
+	});
+
+	it("should return an error if targetPos is not an integer", () => {
+		expect(parseTargetPosArg(args, 1, "targetPos:1.5"))
+			.to.deep.equal(error(1, "targetPos 的值应为整数", "1.5"));
 	});
 
 	it("should return an error if targetPos is specified multiple times", () => {
-		expect(parseIntArg(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
-		expect(parseIntArg(args, "targetPos", "-x", 2, "targetPos:500"))
+		expect(parseTargetPosArg(args, 1, "targetPos:400")).to.equal(null);
+		expect(parseTargetPosArg(args, 2, "targetPos:500"))
 			.to.deep.equal(error(2, "参数重复", "targetPos"));
 	});
 });

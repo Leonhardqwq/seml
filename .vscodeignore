@@ -4,3 +4,4 @@
 vsc-extension-quickstart.md
 .nyc_output
 coverage
+node_modules/**

@@ -921,22 +921,30 @@ describe("parseZombieTypeArg", () => {
         (0, chai_1.expect)(args).to.deep.equal({ types: ["-z", [zombie_types_1.ZombieType.gigaGargantuar, zombie_types_1.ZombieType.gargantuar].join(",")] });
     });
 });
-describe("parseIntArg (targetPos)", () => {
+describe("parseTargetPosArg", () => {
     let args;
     beforeEach(() => {
         args = {};
     });
-    it("should parse targetPos", () => {
-        (0, chai_1.expect)((0, parser_1.parseIntArg)(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
+    it("should parse positive targetPos", () => {
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 1, "targetPos:400")).to.equal(null);
         (0, chai_1.expect)(args).to.deep.equal({ targetPos: ["-x", "400"] });
     });
-    it("should return an error if targetPos is not a positive integer", () => {
-        (0, chai_1.expect)((0, parser_1.parseIntArg)(args, "targetPos", "-x", 1, "targetPos:0"))
-            .to.deep.equal((0, error_1.error)(1, "targetPos 的值应为正整数", "0"));
+    it("should parse zero targetPos", () => {
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 1, "targetPos:0")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ targetPos: ["-x", "0"] });
+    });
+    it("should parse negative targetPos", () => {
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 1, "targetPos:-100")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ targetPos: ["-x", "-100"] });
+    });
+    it("should return an error if targetPos is not an integer", () => {
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 1, "targetPos:1.5"))
+            .to.deep.equal((0, error_1.error)(1, "targetPos 的值应为整数", "1.5"));
     });
     it("should return an error if targetPos is specified multiple times", () => {
-        (0, chai_1.expect)((0, parser_1.parseIntArg)(args, "targetPos", "-x", 1, "targetPos:400")).to.equal(null);
-        (0, chai_1.expect)((0, parser_1.parseIntArg)(args, "targetPos", "-x", 2, "targetPos:500"))
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 1, "targetPos:400")).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseTargetPosArg)(args, 2, "targetPos:500"))
             .to.deep.equal((0, error_1.error)(2, "参数重复", "targetPos"));
     });
 });
