@@ -922,6 +922,8 @@ export function parse(text: string) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
 			} else if (symbol.startsWith("cobDelay:")) {
 				parseResult = parseBoolArg(args, "cobDelay", "-cd", lineNum, line);
+			} else if (symbol.startsWith("std:")) {
+				parseResult = parseBoolArg(args, "std", "-std", lineNum, line);
 			} else if (symbol.startsWith("impIndex:")) {
 				parseResult = parseImpIndex(out, lineNum, line);
 			} else if (symbol.startsWith("types:")) {
