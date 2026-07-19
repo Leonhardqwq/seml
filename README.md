@@ -169,6 +169,8 @@ w1 0 300   # wave1 完美预判冰, 波长为300
 w 0 300    # 自动推测波数
 ```
 
+启用 `avzTime:true` 后，1冰为完美预判冰，0冰被忽略。
+
 ### 用炮
 
 使用一门或两门炮. 可用 B/D 代替 P 传递更精确的语义. 大小写均可.
@@ -256,7 +258,7 @@ SET x x+24
 scene:PE             # 场地, 六场地大小写皆可
 protect:17 27 57 67  # 要保护的位置, 默认为炮, 加'表示普通植物
 repeat:300           # 测试选卡数 (默认 300), 每个选卡总计 1000 只红眼
-avzTime:false        # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速为 4n-1), 默认为 false
+avzTime:false        # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速不修正，仍为 4n-1), 默认为 false
 ```
 
 ### 炮伤测试
@@ -265,7 +267,7 @@ avzTime:false        # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速为 
 scene:PE                # 场地, 六场地大小写皆可
 protect:18 28 38 48 58  # 要保护的位置, 默认为炮, 加'表示普通植物
 repeat:10000            # 测试波数 (默认 10000), 每波梯/丑/橄/篮各 5 只
-avzTime:false           # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速为 4n-1), 默认为 false
+avzTime:false           # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速不修正，仍为 4n-1), 默认为 false
 ```
 
 ### 刷新测试
@@ -278,7 +280,7 @@ huge:false              # true 为旗帜波, false 为普通波
 activate:true           # true 为激活, false 为分离
 dance:true              # true 为使用 dance cheat (测激活用 fast, 测分离用 slow), false 为不使用
 repeat:1000             # 测试选卡数 (默认 1000)
-avzTime:false           # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速为 4n-1), 默认为 false
+avzTime:false           # 使用 AvZ 的时间基准 (预判冰为 1, 垫快速不修正，仍为 4n-1), 默认为 false
 ```
 > 参考: [僵尸命名一览](https://forum.crescb.com/postid/5885/)
 

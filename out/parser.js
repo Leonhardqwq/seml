@@ -812,18 +812,16 @@ function parse(text) {
     delete args["avzTime"];
     if (avzTime) {
         for (const wave of out.waves) {
+            const correctedIceTimes = wave.iceTimes
+                .filter(time => time > 0)
+                .map(time => time - 1);
+            wave.iceTimes.splice(0, wave.iceTimes.length, ...correctedIceTimes);
             for (const action of wave.actions) {
                 if (action.op === "FixedCard" && ["A", "J", "a", "N", "W"].includes(action.symbol)) {
                     action.time -= 1;
                 }
                 else if (action.op === "SmartCard" && ["A_NUM", "J_NUM", "a_NUM", "W_NUM"].includes(action.symbol)) {
                     action.time -= 1;
-                }
-                else if (action.op === "FixedFodder" || action.op === "SmartFodder") {
-                    action.time += 1;
-                    if (action.shovelTime !== undefined) {
-                        action.shovelTime += 1;
-                    }
                 }
             }
         }
