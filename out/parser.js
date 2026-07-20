@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseTargetPosArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseSpawnRowArg = exports.parseTargetPosArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -634,6 +634,30 @@ function parseTargetPosArg(args, lineNum, line) {
     return null;
 }
 exports.parseTargetPosArg = parseTargetPosArg;
+function parseSpawnRowArg(out, args, lineNum, line) {
+    if ("spawnRow" in args) {
+        return (0, error_1.error)(lineNum, "参数重复", "spawnRow");
+    }
+    const value = line.split(":").slice(1).join(":").trim();
+    const maxRows = getMaxRows(out.setting.scene);
+    const rows = new Set();
+    for (const rowToken of value) {
+        const row = (0, string_1.parseNatural)(rowToken);
+        if (row === null || row < 1 || row > maxRows) {
+            return (0, error_1.error)(lineNum, `spawnRow 的值应由 1~${maxRows} 的路数组成`, value);
+        }
+        if (rows.has(row)) {
+            return (0, error_1.error)(lineNum, "spawnRow 中的路数不可重复", value);
+        }
+        rows.add(row);
+    }
+    if (rows.size === 0) {
+        return (0, error_1.error)(lineNum, `spawnRow 的值应由 1~${maxRows} 的路数组成`, value);
+    }
+    args["spawnRow"] = ["-row", value];
+    return null;
+}
+exports.parseSpawnRowArg = parseSpawnRowArg;
 function parseZombieTypeArg(args, argName, argFlag, scene, lineNum, line, prevTypesStr, checkAcceptable = false) {
     if (argName in args) {
         return (0, error_1.error)(lineNum, "参数重复", argName);
@@ -754,6 +778,9 @@ function parse(text) {
             }
             else if (symbol.startsWith("targetPos:")) {
                 parseResult = parseTargetPosArg(args, lineNum, line);
+            }
+            else if (symbol.startsWith("spawnRow:")) {
+                parseResult = parseSpawnRowArg(out, args, lineNum, line);
             }
             else if (symbol.startsWith("avzTime:")) {
                 parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);

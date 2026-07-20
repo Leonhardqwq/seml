@@ -2,7 +2,8 @@
 import { error } from "../../error";
 import {
     parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
-    parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseTargetPosArg, parseZombieTypeArg, parseBoolArg,
+    parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseTargetPosArg, parseSpawnRowArg,
+    parseZombieTypeArg, parseBoolArg,
     expandLines, replaceVariables
 } from '../../parser';
 import { PlantType } from "../../plant_types";
@@ -1163,6 +1164,48 @@ describe("parseTargetPosArg", () => {
 		expect(parseTargetPosArg(args, 1, "targetPos:400")).to.equal(null);
 		expect(parseTargetPosArg(args, 2, "targetPos:500"))
 			.to.deep.equal(error(2, "参数重复", "targetPos"));
+	});
+});
+
+describe("parseSpawnRowArg", () => {
+	let out: ParserOutput;
+	let args: { [key: string]: string[] };
+
+	beforeEach(() => {
+		out = { setting: { scene: "FE" }, waves: [] };
+		args = {};
+	});
+
+	it("should parse one spawn row", () => {
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:1")).to.equal(null);
+		expect(args).to.deep.equal({ spawnRow: ["-row", "1"] });
+	});
+
+	it("should parse multiple spawn rows", () => {
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:1256")).to.equal(null);
+		expect(args).to.deep.equal({ spawnRow: ["-row", "1256"] });
+	});
+
+	it("should reject a row outside the scene", () => {
+		out.setting.scene = "NE";
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:16"))
+			.to.deep.equal(error(1, "spawnRow 的值应由 1~5 的路数组成", "16"));
+	});
+
+	it("should reject duplicate rows", () => {
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:11"))
+			.to.deep.equal(error(1, "spawnRow 中的路数不可重复", "11"));
+	});
+
+	it("should reject an empty row list", () => {
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:"))
+			.to.deep.equal(error(1, "spawnRow 的值应由 1~6 的路数组成", ""));
+	});
+
+	it("should reject duplicate settings", () => {
+		expect(parseSpawnRowArg(out, args, 1, "spawnRow:13")).to.equal(null);
+		expect(parseSpawnRowArg(out, args, 2, "spawnRow:25"))
+			.to.deep.equal(error(2, "参数重复", "spawnRow"));
 	});
 });
 

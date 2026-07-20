@@ -948,6 +948,40 @@ describe("parseTargetPosArg", () => {
             .to.deep.equal((0, error_1.error)(2, "参数重复", "targetPos"));
     });
 });
+describe("parseSpawnRowArg", () => {
+    let out;
+    let args;
+    beforeEach(() => {
+        out = { setting: { scene: "FE" }, waves: [] };
+        args = {};
+    });
+    it("should parse one spawn row", () => {
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:1")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ spawnRow: ["-row", "1"] });
+    });
+    it("should parse multiple spawn rows", () => {
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:1256")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ spawnRow: ["-row", "1256"] });
+    });
+    it("should reject a row outside the scene", () => {
+        out.setting.scene = "NE";
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:16"))
+            .to.deep.equal((0, error_1.error)(1, "spawnRow 的值应由 1~5 的路数组成", "16"));
+    });
+    it("should reject duplicate rows", () => {
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:11"))
+            .to.deep.equal((0, error_1.error)(1, "spawnRow 中的路数不可重复", "11"));
+    });
+    it("should reject an empty row list", () => {
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:"))
+            .to.deep.equal((0, error_1.error)(1, "spawnRow 的值应由 1~6 的路数组成", ""));
+    });
+    it("should reject duplicate settings", () => {
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 1, "spawnRow:13")).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseSpawnRowArg)(out, args, 2, "spawnRow:25"))
+            .to.deep.equal((0, error_1.error)(2, "参数重复", "spawnRow"));
+    });
+});
 describe("parseBoolArg", () => {
     let args;
     beforeEach(() => {

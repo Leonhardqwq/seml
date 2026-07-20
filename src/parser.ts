@@ -813,6 +813,33 @@ export function parseTargetPosArg(args: { [key: string]: string[] }, lineNum: nu
 	return null;
 }
 
+export function parseSpawnRowArg(out: ParserOutput, args: { [key: string]: string[] },
+	lineNum: number, line: string): null | Error {
+	if ("spawnRow" in args) {
+		return error(lineNum, "参数重复", "spawnRow");
+	}
+
+	const value = line.split(":").slice(1).join(":").trim();
+	const maxRows = getMaxRows(out.setting.scene);
+	const rows = new Set<number>();
+	for (const rowToken of value) {
+		const row = parseNatural(rowToken);
+		if (row === null || row < 1 || row > maxRows) {
+			return error(lineNum, `spawnRow 的值应由 1~${maxRows} 的路数组成`, value);
+		}
+		if (rows.has(row)) {
+			return error(lineNum, "spawnRow 中的路数不可重复", value);
+		}
+		rows.add(row);
+	}
+	if (rows.size === 0) {
+		return error(lineNum, `spawnRow 的值应由 1~${maxRows} 的路数组成`, value);
+	}
+
+	args["spawnRow"] = ["-row", value];
+	return null;
+}
+
 export function parseZombieTypeArg(args: { [key: string]: string[] }, argName: string, argFlag: string,
 	scene: Scene, lineNum: number, line: string, prevTypesStr: string | undefined, checkAcceptable: boolean = false): null | Error {
 	if (argName in args) {
@@ -936,6 +963,8 @@ export function parse(text: string) {
 				}
 			} else if (symbol.startsWith("targetPos:")) {
 				parseResult = parseTargetPosArg(args, lineNum, line);
+			} else if (symbol.startsWith("spawnRow:")) {
+				parseResult = parseSpawnRowArg(out, args, lineNum, line);
 			} else if (symbol.startsWith("avzTime:")) {
 				parseResult = parseBoolArg(args, "avzTime", "", lineNum, line);
 				if (!isError(parseResult)) {
