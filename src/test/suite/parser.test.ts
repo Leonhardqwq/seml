@@ -3,7 +3,7 @@ import { error } from "../../error";
 import {
     parse, ParserOutput, parseCob, parseWave, parseFodder, parseFixedCard, parseSmartCard,
     parseSet, parseScene, parseProtect, parseImpIndex, parseIntArg, parseTargetPosArg, parseSpawnRowArg,
-    parseZombieTypeArg, parseBoolArg,
+    parseZombieTypeArg, parseBoolArg, parseDanceArg,
     expandLines, replaceVariables
 } from '../../parser';
 import { PlantType } from "../../plant_types";
@@ -1237,6 +1237,38 @@ describe("parseBoolArg", () => {
         expect(parseBoolArg(args, "huge", "-h", 1, "huge:???"))
             .to.deep.equal(error(1, "huge 的值应为 true 或 false", "???"));
     });
+});
+
+describe("parseDanceArg", () => {
+	let args: { [key: string]: string[] };
+
+	beforeEach(() => {
+		args = {};
+	});
+
+	it("should parse fast and slow modes", () => {
+		expect(parseDanceArg(args, 1, "dance:fast")).to.equal(null);
+		expect(args).to.deep.equal({ dance: ["-dance", "fast"] });
+		args = {};
+		expect(parseDanceArg(args, 1, "dance:slow")).to.equal(null);
+		expect(args).to.deep.equal({ dance: ["-dance", "slow"] });
+	});
+
+	it("should preserve boolean dance syntax", () => {
+		expect(parseDanceArg(args, 1, "dance:true")).to.equal(null);
+		expect(args).to.deep.equal({ dance: ["-d"] });
+		args = {};
+		expect(parseDanceArg(args, 1, "dance:false")).to.equal(null);
+		expect(args).to.deep.equal({});
+	});
+
+	it("should reject invalid or duplicate values", () => {
+		expect(parseDanceArg(args, 1, "dance:middle"))
+			.to.deep.equal(error(1, "dance 的值应为 true、false、fast 或 slow", "middle"));
+		expect(parseDanceArg(args, 1, "dance:fast")).to.equal(null);
+		expect(parseDanceArg(args, 2, "dance:slow"))
+			.to.deep.equal(error(2, "参数重复", "dance"));
+	});
 });
 
 describe("parse", () => {

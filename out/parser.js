@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.replaceVariables = exports.expandLines = exports.parse = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseSpawnRowArg = exports.parseTargetPosArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
+exports.replaceVariables = exports.expandLines = exports.parse = exports.parseDanceArg = exports.parseBoolArg = exports.parseZombieTypeArg = exports.parseSpawnRowArg = exports.parseTargetPosArg = exports.parseIntArg = exports.parseImpIndex = exports.parseProtect = exports.parseScene = exports.parseSet = exports.parseSmartCard = exports.parseFixedCard = exports.parseFodder = exports.parseCob = exports.parseWave = void 0;
 const error_1 = require("./error");
 const string_1 = require("./string");
 const plant_types_1 = require("./plant_types");
@@ -717,6 +717,23 @@ function parseBoolArg(args, argName, argFlag, lineNum, line) {
     return null;
 }
 exports.parseBoolArg = parseBoolArg;
+function parseDanceArg(args, lineNum, line) {
+    if ("dance" in args) {
+        return (0, error_1.error)(lineNum, "参数重复", "dance");
+    }
+    const value = line.split(":").slice(1).join(":").trim().toLowerCase();
+    if (value === "true") {
+        args["dance"] = ["-d"];
+    }
+    else if (value === "fast" || value === "slow") {
+        args["dance"] = ["-dance", value];
+    }
+    else if (value !== "false") {
+        return (0, error_1.error)(lineNum, "dance 的值应为 true、false、fast 或 slow", value);
+    }
+    return null;
+}
+exports.parseDanceArg = parseDanceArg;
 function parse(text) {
     const out = { setting: {}, waves: [] };
     const args = {};
@@ -753,7 +770,7 @@ function parse(text) {
                 parseResult = parseBoolArg(args, "activate", "-a", lineNum, line);
             }
             else if (symbol.startsWith("dance:")) {
-                parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
+                parseResult = parseDanceArg(args, lineNum, line);
             }
             else if (symbol.startsWith("natural:")) {
                 parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);

@@ -909,6 +909,23 @@ export function parseBoolArg(args: { [key: string]: string[] }, argName: string,
 	return null;
 }
 
+export function parseDanceArg(args: { [key: string]: string[] }, lineNum: number,
+	line: string): null | Error {
+	if ("dance" in args) {
+		return error(lineNum, "参数重复", "dance");
+	}
+	const value = line.split(":").slice(1).join(":").trim().toLowerCase();
+
+	if (value === "true") {
+		args["dance"] = ["-d"];
+	} else if (value === "fast" || value === "slow") {
+		args["dance"] = ["-dance", value];
+	} else if (value !== "false") {
+		return error(lineNum, "dance 的值应为 true、false、fast 或 slow", value);
+	}
+	return null;
+}
+
 export function parse(text: string) {
 	const out: ParserOutput = { setting: {}, waves: [] };
 	const args: { [key: string]: string[] } = {};
@@ -944,7 +961,7 @@ export function parse(text: string) {
 			} else if (symbol.startsWith("activate:")) {
 				parseResult = parseBoolArg(args, "activate", "-a", lineNum, line);
 			} else if (symbol.startsWith("dance:")) {
-				parseResult = parseBoolArg(args, "dance", "-d", lineNum, line);
+				parseResult = parseDanceArg(args, lineNum, line);
 			} else if (symbol.startsWith("natural:")) {
 				parseResult = parseBoolArg(args, "natural", "-n", lineNum, line);
 			} else if (symbol.startsWith("cobDelay:")) {

@@ -59,6 +59,7 @@ scene:PE
 types:红                # 测试的僵尸类型, 可用中文单字或英文四字缩写
 repeat:20000            # 测试波数 (可省略, 默认 20000)
 huge:false              # true 为旗帜波，僵尸出生坐标 +40；默认为 false
+# dance:fast            # dancecheat，可选：fast 或 slow
 # spawnRow:1256         # 可选；僵尸仅在指定路中均匀随机生成
 # targetPos:700         # 目标整数坐标, 可为负 (可省略), 提供后改为测试僵尸到达该坐标的时刻分布
 

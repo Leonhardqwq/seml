@@ -1005,6 +1005,33 @@ describe("parseBoolArg", () => {
             .to.deep.equal((0, error_1.error)(1, "huge 的值应为 true 或 false", "???"));
     });
 });
+describe("parseDanceArg", () => {
+    let args;
+    beforeEach(() => {
+        args = {};
+    });
+    it("should parse fast and slow modes", () => {
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:fast")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ dance: ["-dance", "fast"] });
+        args = {};
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:slow")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ dance: ["-dance", "slow"] });
+    });
+    it("should preserve boolean dance syntax", () => {
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:true")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({ dance: ["-d"] });
+        args = {};
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:false")).to.equal(null);
+        (0, chai_1.expect)(args).to.deep.equal({});
+    });
+    it("should reject invalid or duplicate values", () => {
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:middle"))
+            .to.deep.equal((0, error_1.error)(1, "dance 的值应为 true、false、fast 或 slow", "middle"));
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 1, "dance:fast")).to.equal(null);
+        (0, chai_1.expect)((0, parser_1.parseDanceArg)(args, 2, "dance:slow"))
+            .to.deep.equal((0, error_1.error)(2, "参数重复", "dance"));
+    });
+});
 describe("parse", () => {
     it("should return empty object if input is empty", () => {
         (0, chai_1.expect)((0, parser_1.parse)(""))
